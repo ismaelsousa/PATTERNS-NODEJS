@@ -11,6 +11,11 @@ import ScheduleController from './app/controllers/ScheduleController';
 import NotificationController from './app/controllers/NotificationController';
 import AvailableController from './app/controllers/AvailableController';
 
+import validateUserStore from './app/validators/UserStore';
+import validateUserUpdate from './app/validators/UserUpdate';
+import validateSessionStore from './app/validators/SessionStore';
+import validateAppointmentStore from './app/validators/AppointmentStore';
+
 import authMiddleware from './app/middlewares/auth';
 
 const routes = new Router();
@@ -18,17 +23,21 @@ const routes = new Router();
 // inicializa o multer com as configurações
 const upload = multer(multerConfig);
 
-routes.post('/sessions', SessionsController.store);
-routes.post('/users', UserController.store);
+routes.post('/sessions', validateSessionStore, SessionsController.store);
+routes.post('/users', validateUserStore, UserController.store);
 
 // Somente rotas abaixo serão necessária autorização
 routes.use(authMiddleware);
-routes.put('/users', UserController.update);
+routes.put('/users', validateUserUpdate, UserController.update);
 
 routes.get('/providers', ProviderController.index);
 routes.get('/providers/:providerId/available', AvailableController.index);
 
-routes.post('/appointments', AppointmentController.store);
+routes.post(
+  '/appointments',
+  validateAppointmentStore,
+  AppointmentController.store
+);
 routes.get('/appointments', AppointmentController.index);
 routes.delete('/appointments/:id', AppointmentController.delete);
 
