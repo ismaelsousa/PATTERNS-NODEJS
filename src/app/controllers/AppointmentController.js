@@ -1,13 +1,9 @@
-import { isBefore, subHours } from 'date-fns';
 import Appointment from '../models/Appointment';
 import User from '../models/User';
 import File from '../models/File';
 
-import CancellationMail from '../jobs/CancellationMail';
-
-import Queue from '../../lib/Queue';
-
 import CreateAppointmentService from '../services/CreateAppointmentService';
+import CancellAppointmentService from '../services/CancellAppointmentService';
 
 class AppointmentController {
   async index(req, res) {
@@ -46,45 +42,10 @@ class AppointmentController {
   }
 
   async delete(req, res) {
-    const appointment = await Appointment.findByPk(req.params.id, {
-      include: [
-        {
-          model: User,
-          as: 'provider',
-          attributes: ['name', 'email'],
-        },
-        {
-          model: User,
-          as: 'user',
-          attributes: ['name'],
-        },
-      ],
+    const appointment = await CancellAppointmentService.run({
+      provider_id: req.params.id,
+      user_id: req.userId,
     });
-
-    if (appointment.user_id !== req.userId) {
-      return res.status(401).json({
-        error: "you don't have permission to cancel this appointment",
-      });
-    }
-    /**
-     * reduz a hora em duas a menos e verifica se é antes da hota atual
-     */
-    const dateWithSub = subHours(appointment.date, 2);
-
-    if (isBefore(dateWithSub, new Date())) {
-      return res.status(401).json({
-        error: 'you can onlyy cancel appointments 2 hours in advance.',
-      });
-    }
-    appointment.canceled_at = new Date();
-
-    await appointment.save();
-
-    // Coloca na fila para ser processado
-    Queue.add(CancellationMail.key, {
-      appointment,
-    });
-
     return res.json(appointment);
   }
 }
